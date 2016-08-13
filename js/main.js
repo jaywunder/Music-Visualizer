@@ -6,24 +6,27 @@ const sequentialArray = function (length) {
   return array
 }
 
-
 class AudioVisualiser {
   constructor() {
     // audio variables
     this.audio = new Audio()
     this.context = new AudioContext()
     this.analyser = this.context.createAnalyser()
-    this.analyser.fftSize = 32
+    this.analyser.fftSize = 128
     this.source = this.context.createMediaElementSource(this.audio)
-    // this.source = this.context.createOscillator()
     this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount)
 
     // graph variables
     this.frequencyDataStorage = []
+    this.velocityDataStorage = []
 
+    // misc other variables
+    this.running = true
+    this.step = -1
+
+    // call setup and start rendering
     this.setupAudio()
     this.setupGraphing()
-
     this.renderFrame()
   }
 
@@ -35,50 +38,55 @@ class AudioVisualiser {
     this.source.connect(this.analyser)
     this.analyser.connect(this.context.destination)
     this.audio.onended = this.onComplete.bind(this)
-
-    // in case I want to use an oscillator
-    // this.source.type = 'square';
-    // this.source.frequency.value = 2000; // value in hertz
-    // this.source.connect(this.analyser);
-    // this.source.connect(this.context.destination);
-    // this.source.start();
   }
 
   setupGraphing() {
-    setTimeout(this.onComplete.bind(this), 3000)
     for (let i = 0; i < this.analyser.fftSize; i++) {
-      this.frequencyDataStorage.push([])
-    }
-  }
-
-  renderFrame() {
-    requestAnimationFrame(this.renderFrame.bind(this))
-
-    this.analyser.getByteFrequencyData(this.frequencyData)
-    this.addPoints()
-  }
-
-  onComplete() {
-    this.renderGraph()
-  }
-
-  addPoints() {
-    this.frequencyData.forEach((frequency, i) => {
-      this.frequencyDataStorage[i].push(frequency)
-    })
-  }
-
-  renderGraph() {
-    let graphData = []
-    for (let i in this.frequencyDataStorage) {
-      graphData.push({
-        x: sequentialArray(this.frequencyDataStorage[i].length),
-        y: this.frequencyDataStorage[i],
+      this.frequencyDataStorage.push({
+        x: [],
+        y: [],
+        type: 'scatter'
+      })
+      this.velocityDataStorage.push({
+        x: [],
+        y: [],
         type: 'scatter'
       })
     }
 
-    Plotly.newPlot('graph', graphData)
+    Plotly.newPlot('frequency-graph', this.frequencyDataStorage)
+    Plotly.newPlot('velocity-graph', this.velocityDataStorage)
+  }
+
+  renderFrame() {
+    if ( this.running ) requestAnimationFrame(this.renderFrame.bind(this))
+    this.step++
+
+    this.analyser.getByteFrequencyData(this.frequencyData)
+    this.addPoints()
+    Plotly.redraw('frequency-graph')
+    Plotly.redraw('velocity-graph')
+  }
+
+  onComplete() {
+    this.running = false
+  }
+
+  addPoints() {
+    this.frequencyData.forEach((frequency, i) => {
+      this.frequencyDataStorage[i].x.push(this.step)
+      this.frequencyDataStorage[i].y.push(frequency)
+      this.velocityDataStorage[i].x.push(this.step)
+
+      if (this.step > 0) {
+        let previous = this.frequencyDataStorage[i].y[this.step-1]
+        let current = this.frequencyDataStorage[i].y[this.step]
+        let velocity = current - previous
+        this.velocityDataStorage[i].y.push(velocity)
+      } else {
+        this.velocityDataStorage[i].y.push(frequency)
+      }
+    })
   }
 }
 
