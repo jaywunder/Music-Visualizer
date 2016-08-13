@@ -6,51 +6,28 @@ const sequentialArray = function (length) {
   return array
 }
 
-class AudioVisualiser {
-  constructor() {
-    // audio variables
-    this.audio = new Audio()
-    this.context = new AudioContext()
-    this.analyser = this.context.createAnalyser()
-    this.analyser.fftSize = 128
-    this.source = this.context.createMediaElementSource(this.audio)
-    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount)
 
-    // graph variables
+class AudioGrapher {
+  constructor(fftSize) {
+    this.fftSize = fftSize
+    this.step = -1
     this.frequencyDataStorage = []
     this.velocityDataStorage = []
 
-    // misc other variables
-    this.running = true
-    this.step = -1
-
-    // call setup and start rendering
-    this.setupAudio()
-    this.setupGraphing()
-    this.renderFrame()
-  }
-
-  setupAudio() {
-    this.audio.src = './assets/ride4u.mp3'
-    this.audio.autoplay = true
-    document.body.appendChild(this.audio)
-
-    this.source.connect(this.analyser)
-    this.analyser.connect(this.context.destination)
-    this.audio.onended = this.onComplete.bind(this)
-  }
-
-  setupGraphing() {
-    for (let i = 0; i < this.analyser.fftSize; i++) {
+    for (let i = 0; i < this.fftSize; i++) {
       this.frequencyDataStorage.push({
         x: [],
         y: [],
-        type: 'scatter'
+        mode: 'markers+lines',
+        type: 'scatter',
+        hoverinfo: 'none'
       })
       this.velocityDataStorage.push({
         x: [],
         y: [],
-        type: 'scatter'
+        mode: 'markers+lines',
+        type: 'scatter',
+        hoverinfo: 'none'
       })
     }
 
@@ -58,22 +35,10 @@ class AudioVisualiser {
     Plotly.newPlot('velocity-graph', this.velocityDataStorage)
   }
 
-  renderFrame() {
-    if ( this.running ) requestAnimationFrame(this.renderFrame.bind(this))
+  addFrequencyData(frequencyData) {
     this.step++
 
-    this.analyser.getByteFrequencyData(this.frequencyData)
-    this.addPoints()
-    Plotly.redraw('frequency-graph')
-    Plotly.redraw('velocity-graph')
-  }
-
-  onComplete() {
-    this.running = false
-  }
-
-  addPoints() {
-    this.frequencyData.forEach((frequency, i) => {
+    frequencyData.forEach((frequency, i) => {
       this.frequencyDataStorage[i].x.push(this.step)
       this.frequencyDataStorage[i].y.push(frequency)
       this.velocityDataStorage[i].x.push(this.step)
@@ -90,7 +55,69 @@ class AudioVisualiser {
   }
 }
 
-new AudioVisualiser()
+class AudioWrapper {
+  constructor(fftSize, onComplete) {
+    this.audio = new Audio()
+    this.context = new AudioContext()
+    this.analyser = this.context.createAnalyser()
+    this.analyser.fftSize = fftSize
+    this.source = this.context.createMediaElementSource(this.audio)
+    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount)
+
+    this.audio.src = './assets/ride4u.mp3'
+    this.audio.autoplay = true
+    document.body.appendChild(this.audio)
+
+    this.source.connect(this.analyser)
+    this.analyser.connect(this.context.destination)
+    this.audio.onended = onComplete
+  }
+
+  get fftSize() { return this.analyser.fftSize }
+
+  getFrequencyData() {
+    this.analyser.getByteFrequencyData(this.frequencyData)
+
+    return this.frequencyData
+  }
+}
+
+class AudioVisualizer {
+  constructor() {
+
+  }
+
+  update(frequencyData) {
+
+  }
+}
+
+class AudioMaster {
+  constructor() {
+    this.audio = new AudioWrapper(32, this.onComplete.bind(this))
+    this.grapher = new AudioGrapher(this.audio.fftSize)
+    this.visual = new AudioVisualizer()
+    this.running = true
+
+    this.renderFrame()
+  }
+
+  renderFrame() {
+    if ( this.running ) requestAnimationFrame(this.renderFrame.bind(this))
+
+    let frequencyData = this.audio.getFrequencyData()
+    this.grapher.addFrequencyData(frequencyData)
+    this.visual.update(frequencyData)
+    Plotly.redraw('frequency-graph')
+    Plotly.redraw('velocity-graph')
+  }
+
+  onComplete() {
+    this.running = false
+  }
+}
+
+new AudioMaster()
 
 // trace1 = {
 //   x: [1,2,3,4],
