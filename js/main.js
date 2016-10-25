@@ -1,14 +1,6 @@
-const sequentialArray = function (length) {
-  let array = []
-  for (let i = 0; i < length; i++) {
-    array.push(i)
-  }
-  return array
-}
-
-
 class AudioGrapher {
   constructor(fftSize) {
+    // https://plot.ly/javascript/plotlyjs-function-reference/
     this.fftSize = fftSize
     this.step = -1
     this.frequencyDataStorage = []
@@ -18,14 +10,14 @@ class AudioGrapher {
       this.frequencyDataStorage.push({
         x: [],
         y: [],
-        mode: 'markers+lines',
+        mode: 'lines',
         type: 'scatter',
         hoverinfo: 'none'
       })
       this.velocityDataStorage.push({
         x: [],
         y: [],
-        mode: 'markers+lines',
+        mode: 'lines',
         type: 'scatter',
         hoverinfo: 'none'
       })
@@ -84,7 +76,33 @@ class AudioWrapper {
 
 class AudioVisualizer {
   constructor() {
+    this.renderer = PIXI.autoDetectRenderer(800, 600,{ backgroundColor : 0x1099bb });
+    this.stage = new PIXI.Container();
+    this.graphics = new PIXI.Graphics()
+    document.getElementById('canvas-container').appendChild(this.renderer.view);
 
+
+    // this.texture = PIXI.Texture.fromImage('assets/img/bunny.png');
+    // this.bunny = new PIXI.Sprite(texture);
+    // bunny.anchor.x = 0.5;
+    // bunny.anchor.y = 0.5;
+    // bunny.position.x = 200;
+    // bunny.position.y = 150;
+
+    this.stage.addChild(this.bunny);
+
+    this.update()
+
+    let $this = this;
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // just for fun, let's rotate mr rabbit a little
+        $this.bunny.rotation += 0.1;
+
+        // render the container
+        $this.renderer.render($this.stage);
+    }
   }
 
   update(frequencyData) {
@@ -96,7 +114,8 @@ class AudioMaster {
   constructor() {
     this.audio = new AudioWrapper(32, this.onComplete.bind(this))
     this.grapher = new AudioGrapher(this.audio.fftSize)
-    this.visual = new AudioVisualizer()
+    this.spectogram = new Spectogram()
+    // this.visual = new AudioVisualizer()
     this.running = true
 
     this.renderFrame()
@@ -107,7 +126,7 @@ class AudioMaster {
 
     let frequencyData = this.audio.getFrequencyData()
     this.grapher.addFrequencyData(frequencyData)
-    this.visual.update(frequencyData)
+    // this.visual.update(frequencyData)
     Plotly.redraw('frequency-graph')
     Plotly.redraw('velocity-graph')
   }
