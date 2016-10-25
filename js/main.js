@@ -1,51 +1,8 @@
-class AudioGrapher {
-  constructor(fftSize) {
-    // https://plot.ly/javascript/plotlyjs-function-reference/
-    this.fftSize = fftSize
-    this.step = -1
-    this.frequencyDataStorage = []
-    this.velocityDataStorage = []
+import Chart from 'chart.js'
 
-    for (let i = 0; i < this.fftSize; i++) {
-      this.frequencyDataStorage.push({
-        x: [],
-        y: [],
-        mode: 'lines',
-        type: 'scatter',
-        hoverinfo: 'none'
-      })
-      this.velocityDataStorage.push({
-        x: [],
-        y: [],
-        mode: 'lines',
-        type: 'scatter',
-        hoverinfo: 'none'
-      })
-    }
-
-    Plotly.newPlot('frequency-graph', this.frequencyDataStorage)
-    Plotly.newPlot('velocity-graph', this.velocityDataStorage)
-  }
-
-  addFrequencyData(frequencyData) {
-    this.step++
-
-    frequencyData.forEach((frequency, i) => {
-      this.frequencyDataStorage[i].x.push(this.step)
-      this.frequencyDataStorage[i].y.push(frequency)
-      this.velocityDataStorage[i].x.push(this.step)
-
-      if (this.step > 0) {
-        let previous = this.frequencyDataStorage[i].y[this.step-1]
-        let current = this.frequencyDataStorage[i].y[this.step]
-        let velocity = current - previous
-        this.velocityDataStorage[i].y.push(velocity)
-      } else {
-        this.velocityDataStorage[i].y.push(frequency)
-      }
-    })
-  }
-}
+import AudioGrapher from './audio-grapher.js'
+import AudioVisualizer from './audio-visualizer.js'
+import Spectogram from './spectogram.js'
 
 class AudioWrapper {
   constructor(fftSize, onComplete) {
@@ -74,47 +31,13 @@ class AudioWrapper {
   }
 }
 
-class AudioVisualizer {
-  constructor() {
-    this.renderer = PIXI.autoDetectRenderer(800, 600,{ backgroundColor : 0x1099bb });
-    this.stage = new PIXI.Container();
-    this.graphics = new PIXI.Graphics()
-    document.getElementById('canvas-container').appendChild(this.renderer.view);
-
-
-    // this.texture = PIXI.Texture.fromImage('assets/img/bunny.png');
-    // this.bunny = new PIXI.Sprite(texture);
-    // bunny.anchor.x = 0.5;
-    // bunny.anchor.y = 0.5;
-    // bunny.position.x = 200;
-    // bunny.position.y = 150;
-
-    this.stage.addChild(this.bunny);
-
-    this.update()
-
-    let $this = this;
-    function animate() {
-        requestAnimationFrame(animate);
-
-        // just for fun, let's rotate mr rabbit a little
-        $this.bunny.rotation += 0.1;
-
-        // render the container
-        $this.renderer.render($this.stage);
-    }
-  }
-
-  update(frequencyData) {
-
-  }
-}
-
 class AudioMaster {
   constructor() {
-    this.audio = new AudioWrapper(32, this.onComplete.bind(this))
-    this.grapher = new AudioGrapher(this.audio.fftSize)
-    this.spectogram = new Spectogram()
+    const FFT_SIZE = 256
+    this.audio = new AudioWrapper(FFT_SIZE, this.onComplete.bind(this))
+    this.spectogram = new Spectogram(FFT_SIZE)
+
+    // this.grapher = new AudioGrapher(FFTSIZE)
     // this.visual = new AudioVisualizer()
     this.running = true
 
@@ -125,10 +48,13 @@ class AudioMaster {
     if ( this.running ) requestAnimationFrame(this.renderFrame.bind(this))
 
     let frequencyData = this.audio.getFrequencyData()
-    this.grapher.addFrequencyData(frequencyData)
+    console.log(frequencyData);
+    this.spectogram.update(frequencyData)
+
+    // this.grapher.addFrequencyData(frequencyData)
     // this.visual.update(frequencyData)
-    Plotly.redraw('frequency-graph')
-    Plotly.redraw('velocity-graph')
+    // Plotly.redraw('frequency-graph')
+    // Plotly.redraw('velocity-graph')
   }
 
   onComplete() {
@@ -138,16 +64,36 @@ class AudioMaster {
 
 new AudioMaster()
 
-// trace1 = {
-//   x: [1,2,3,4],
-//   y: [1,2,3,4],
-//   type: 'scatter'
-// }
+// let data = {
+//   labels: ["January", "February", "March", "April", "May", "June", "July"],
+//   datasets: [
+//     {
+//       label: "",
+//       backgroundColor: [
+//         'rgba(255, 99, 132, 0.2)',
+//         'rgba(54, 162, 235, 0.2)',
+//         'rgba(255, 206, 86, 0.2)',
+//         'rgba(75, 192, 192, 0.2)',
+//         'rgba(153, 102, 255, 0.2)',
+//         'rgba(255, 159, 64, 0.2)'
+//       ],
+//       borderColor: [
+//         'rgba(255,99,132,1)',
+//         'rgba(54, 162, 235, 1)',
+//         'rgba(255, 206, 86, 1)',
+//         'rgba(75, 192, 192, 1)',
+//         'rgba(153, 102, 255, 1)',
+//         'rgba(255, 159, 64, 1)'
+//       ],
+//       borderWidth: 0,
+//       data: [65, 59, 80, 81, 56, 55, 40],
+//     }
+//   ]
+// };
 //
-// trace2 = {
-//   x: [2,3,4],
-//   y: [1,2,3],
-//   type: 'scatter'
-// }
-//
-// Plotly.newPlot('graph', [trace1, trace2])
+// let ctx = document.getElementById('chartjs').getContext('2d')
+// let myBarChart = new Chart(ctx, {
+//   type: 'bar',
+//   data,
+//   // options
+// });
