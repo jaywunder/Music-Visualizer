@@ -4,23 +4,30 @@
   <meta charset="UTF-8">
   <title>Music Testing</title>
   <meta name="Author" content=""/>
-  <link rel="stylesheet" type="text/css" href="">
+  <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 <body>
 
-  <canvas id="chartjs" width="1080" height="750"></canvas>
+  <div class="col">
+    <div class="row">
+      <canvas id="value-canvas" width="540" height="350"></canvas>
+      <canvas id="derivative-canvas" width="540" height="350"></canvas>
+    </div>
+    <canvas id="derivative-line-canvas" width="1080" height="350"></canvas>
+  </div>
 
-  <div id="canvas-container">
+  <!-- <div id="canvas-container">
     <canvas id="canvas" width="300" height="300"></canvas>
   </div>
   <div id="frequency-graph"></div>
-  <div id="velocity-graph"></div>
-  <audio id="audio-element" src="./assets/white_noise.mp3"></audio>
+  <div id="velocity-graph"></div> -->
+
+  <!-- <audio controls id="audio-element" src="./assets/white_noise.mp3"></audio> -->
 
 
 
-  <script src="https://cdn.plot.ly/plotly-latest.min.js" charset="utf-8"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/3.0.11/pixi.min.js" charset="utf-8"></script>
+  <!-- <script src="https://cdn.plot.ly/plotly-latest.min.js" charset="utf-8"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/3.0.11/pixi.min.js" charset="utf-8"></script> -->
   <script src="build/bundle.js" charset="utf-8"></script>
 </body>
 </html>

@@ -60,13 +60,15 @@
 
 	var _audioVisualizer2 = _interopRequireDefault(_audioVisualizer);
 
-	var _spectogram = __webpack_require__(153);
+	var _spectrogram = __webpack_require__(154);
 
-	var _spectogram2 = _interopRequireDefault(_spectogram);
+	var _spectrogram2 = _interopRequireDefault(_spectrogram);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	_chart2.default.defaults.global.animation.duration = 50;
 
 	var AudioWrapper = function () {
 	  function AudioWrapper(fftSize, onComplete) {
@@ -109,9 +111,9 @@
 	  function AudioMaster() {
 	    _classCallCheck(this, AudioMaster);
 
-	    var FFT_SIZE = 256;
+	    var FFT_SIZE = 1024 / 2 / 16; // 256
 	    this.audio = new AudioWrapper(FFT_SIZE, this.onComplete.bind(this));
-	    this.spectogram = new _spectogram2.default(FFT_SIZE);
+	    this.spectrogram = new _spectrogram2.default(FFT_SIZE);
 
 	    // this.grapher = new AudioGrapher(FFTSIZE)
 	    // this.visual = new AudioVisualizer()
@@ -126,8 +128,8 @@
 	      if (this.running) requestAnimationFrame(this.renderFrame.bind(this));
 
 	      var frequencyData = this.audio.getFrequencyData();
-	      console.log(frequencyData);
-	      this.spectogram.update(frequencyData);
+	      // console.log(frequencyData);
+	      this.spectrogram.update(frequencyData);
 
 	      // this.grapher.addFrequencyData(frequencyData)
 	      // this.visual.update(frequencyData)
@@ -25518,7 +25520,8 @@
 	exports.default = AudioVisualizer;
 
 /***/ },
-/* 153 */
+/* 153 */,
+/* 154 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -25531,44 +25534,156 @@
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-	var Spectogram = function () {
-	  function Spectogram(fftSize) {
-	    _classCallCheck(this, Spectogram);
+	var Spectrogram = function () {
+	  function Spectrogram(fftSize) {
+	    _classCallCheck(this, Spectrogram);
 
 	    this.fftSize = fftSize;
-	    var data = {
-	      labels: new Array(this.fftSize / 2), // TODO: LABELS
+
+	    this.frequencyHistory = [];
+	    this.derivativeData = [];
+	    this.step = 0;
+
+	    for (var i = 0; i < this.fftSize / 2; i++) {
+	      this.derivativeData.push([0]);
+	      this.frequencyHistory.push([0]);
+	    }
+
+	    var valueData = {
+	      labels: new Array(this.fftSize / 2),
 	      datasets: [{
 	        label: "",
-	        backgroundColor: ['rgba(54, 162, 235, 0.2)'],
+	        backgroundColor: [],
 	        borderWidth: 0,
 	        data: new Array(this.fftSize / 2)
 	      }]
 	    };
 
-	    var ctx = document.getElementById('chartjs').getContext('2d');
-	    this.chart = new Chart(ctx, {
+	    var valueCtx = document.getElementById('value-canvas').getContext('2d');
+	    this.valueGraph = new Chart(valueCtx, {
 	      type: 'bar',
-	      data: data,
+	      data: valueData,
 	      options: {
-	        responsive: false
+	        responsive: false,
+	        scales: {
+	          yAxes: [{
+	            ticks: {
+	              max: 256,
+	              min: 0,
+	              stepSize: 32
+	            }
+	          }]
+	        }
+	      }
+	    });
+
+	    var derivativeData = {
+	      labels: new Array(this.fftSize / 2),
+	      datasets: [{
+	        label: "",
+	        backgroundColor: [],
+	        borderWidth: 0,
+	        data: new Array(this.fftSize / 2)
+	      }]
+	    };
+
+	    var derivativeCtx = document.getElementById('derivative-canvas').getContext('2d');
+	    this.derivativeGraph = new Chart(derivativeCtx, {
+	      type: 'bar',
+	      data: derivativeData,
+	      options: {
+	        responsive: false,
+	        scales: {
+	          yAxes: [{
+	            ticks: {
+	              max: 10,
+	              min: -10,
+	              stepSize: 2
+	            }
+	          }]
+	        }
+	      }
+	    });
+
+	    var derivativeLineData = {
+	      labels: [],
+	      datasets: []
+	    };
+
+	    for (var _i = 0; _i < this.fftSize / 2; _i++) {
+	      derivativeLineData.labels.push('');
+	      derivativeLineData.datasets.push({
+	        label: "",
+	        data: []
+	      });
+	    }
+
+	    var derivativeLineCtx = document.getElementById('derivative-line-canvas').getContext('2d');
+	    this.derivativeLineGraph = new Chart(derivativeLineCtx, {
+	      type: 'line',
+	      data: derivativeLineData,
+	      options: {
+	        responsive: false,
+	        scales: {
+	          yAxes: [{
+	            ticks: {
+	              max: 60,
+	              min: -60,
+	              stepSize: 20
+	            }
+	          }]
+	        }
 	      }
 	    });
 	  }
 
-	  _createClass(Spectogram, [{
+	  _createClass(Spectrogram, [{
 	    key: 'update',
 	    value: function update(frequencyData) {
-	      this.chart.data.datasets[0].data = frequencyData;
-	      this.chart.update();
-	      this.chart.render();
+	      var _this = this;
+
+	      this.step++;
+
+	      // update the value graphs
+	      this.valueGraph.data.datasets[0].data = frequencyData;
+	      this.valueGraph.update();
+	      this.valueGraph.render();
+
+	      // update derivative data
+	      for (var i = 0; i < frequencyData.length; i++) {
+	        var current = frequencyData[i];
+	        var previous = this.frequencyHistory[i][this.step - 1];
+
+	        this.derivativeData[i].push(current - previous);
+	        this.frequencyHistory[i].push(current);
+	      }
+
+	      // render derivative graph
+	      this.derivativeGraph.data.datasets[0].data = this.derivativeData.map(function (item) {
+	        return item[_this.step];
+	      });
+	      this.derivativeGraph.update();
+	      this.derivativeGraph.render();
+
+	      // render derivative line graph
+	      this.derivativeLineGraph.data.labels.push('');
+	      for (var _i2 = 0; _i2 < this.derivativeData.length; _i2++) {
+	        var derivatives = this.derivativeData[_i2];
+
+	        // console.log(this.derivativeLineGraph.data.datasets);
+	        this.derivativeLineGraph.data.datasets[_i2].data.push(derivatives[derivatives.length - 1]);
+
+	        // debugger
+	      }
+	      this.derivativeLineGraph.update();
+	      this.derivativeLineGraph.render();
 	    }
 	  }]);
 
-	  return Spectogram;
+	  return Spectrogram;
 	}();
 
-	exports.default = Spectogram;
+	exports.default = Spectrogram;
 
 /***/ }
 /******/ ]);

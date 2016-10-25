@@ -1,8 +1,9 @@
 import Chart from 'chart.js'
+Chart.defaults.global.animation.duration = 50
 
 import AudioGrapher from './audio-grapher.js'
 import AudioVisualizer from './audio-visualizer.js'
-import Spectogram from './spectogram.js'
+import Spectrogram from './spectrogram.js'
 
 class AudioWrapper {
   constructor(fftSize, onComplete) {
@@ -33,9 +34,9 @@ class AudioWrapper {
 
 class AudioMaster {
   constructor() {
-    const FFT_SIZE = 256
+    const FFT_SIZE = 1024 / 2 / 16 // 256
     this.audio = new AudioWrapper(FFT_SIZE, this.onComplete.bind(this))
-    this.spectogram = new Spectogram(FFT_SIZE)
+    this.spectrogram = new Spectrogram(FFT_SIZE)
 
     // this.grapher = new AudioGrapher(FFTSIZE)
     // this.visual = new AudioVisualizer()
@@ -48,8 +49,8 @@ class AudioMaster {
     if ( this.running ) requestAnimationFrame(this.renderFrame.bind(this))
 
     let frequencyData = this.audio.getFrequencyData()
-    console.log(frequencyData);
-    this.spectogram.update(frequencyData)
+    // console.log(frequencyData);
+    this.spectrogram.update(frequencyData)
 
     // this.grapher.addFrequencyData(frequencyData)
     // this.visual.update(frequencyData)
