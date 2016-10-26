@@ -1,23 +1,14 @@
 export default class Spectrogram {
-  constructor(fftSize) {
-    this.fftSize = fftSize
-
-    this.frequencyHistory = []
-    this.derivativeData = []
-    this.step = 0
-
-    for (let i = 0; i < this.fftSize / 2; i++) {
-      this.derivativeData.push([0])
-      this.frequencyHistory.push([0])
-    }
+  constructor(state) {
+    let nyquist = state.nyquistFrequency
 
     let valueData = {
-      labels: new Array(this.fftSize / 2),
+      labels: new Array(nyquist),
       datasets: [{
         label: "",
         backgroundColor: [],
         borderWidth: 0,
-        data: new Array(this.fftSize / 2),
+        data: new Array(nyquist),
       }]
     }
 
@@ -40,12 +31,12 @@ export default class Spectrogram {
     })
 
     let derivativeData = {
-      labels: new Array(this.fftSize / 2),
+      labels: new Array(nyquist),
       datasets: [{
         label: "",
         backgroundColor: [],
         borderWidth: 0,
-        data: new Array(this.fftSize / 2),
+        data: new Array(nyquist),
       }]
     }
 
@@ -72,7 +63,7 @@ export default class Spectrogram {
       datasets: []
     }
 
-    for (let i = 0; i < this.fftSize / 2; i++) {
+    for (let i = 0; i < nyquist; i++) {
       derivativeLineData.labels.push('')
       derivativeLineData.datasets.push({
         label: "",
@@ -99,40 +90,28 @@ export default class Spectrogram {
     })
   }
 
-  update(frequencyData) {
+  update(state) {
     this.step++
 
     // update the value graphs
-    this.valueGraph.data.datasets[0].data = frequencyData
+    this.valueGraph.data.datasets[0].data = state.currentFrequencyData
     this.valueGraph.update()
     this.valueGraph.render()
 
-    // update derivative data
-    for (let i = 0;  i < frequencyData.length; i++) {
-      let current = frequencyData[i]
-      let previous = this.frequencyHistory[i][this.step - 1]
-
-      this.derivativeData[i].push(current - previous)
-      this.frequencyHistory[i].push(current)
-    }
-
     // render derivative graph
-    this.derivativeGraph.data.datasets[0].data = this.derivativeData.map(
-      (item) => item[this.step]
-    )
+    this.derivativeGraph.data.datasets[0].data = state.currentVelocityData
     this.derivativeGraph.update()
     this.derivativeGraph.render()
 
     // render derivative line graph
     this.derivativeLineGraph.data.labels.push('')
-    for (let i = 0; i < this.derivativeData.length; i++) {
-      let derivatives = this.derivativeData[i]
+    for (let i = 0; i < state.velocityHistory.length; i++) {
+      let derivatives = state.velocityHistory[i]
 
       // console.log(this.derivativeLineGraph.data.datasets);
       this.derivativeLineGraph.data.datasets[i].data.push(derivatives[derivatives.length-1])
-
-      // debugger
     }
+
     this.derivativeLineGraph.update()
     this.derivativeLineGraph.render()
   }

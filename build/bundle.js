@@ -64,59 +64,33 @@
 
 	var _spectrogram2 = _interopRequireDefault(_spectrogram);
 
+	var _audioState = __webpack_require__(155);
+
+	var _audioState2 = _interopRequireDefault(_audioState);
+
+	var _audioWrapper = __webpack_require__(156);
+
+	var _audioWrapper2 = _interopRequireDefault(_audioWrapper);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	_chart2.default.defaults.global.animation.duration = 50;
 
-	var AudioWrapper = function () {
-	  function AudioWrapper(fftSize, onComplete) {
-	    _classCallCheck(this, AudioWrapper);
-
-	    this.audio = new Audio();
-	    this.context = new AudioContext();
-	    this.analyser = this.context.createAnalyser();
-	    this.analyser.fftSize = fftSize;
-	    this.source = this.context.createMediaElementSource(this.audio);
-	    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
-
-	    this.audio.src = './assets/ride4u.mp3';
-	    this.audio.autoplay = true;
-	    document.body.appendChild(this.audio);
-
-	    this.source.connect(this.analyser);
-	    this.analyser.connect(this.context.destination);
-	    this.audio.onended = onComplete;
-	  }
-
-	  _createClass(AudioWrapper, [{
-	    key: 'getFrequencyData',
-	    value: function getFrequencyData() {
-	      this.analyser.getByteFrequencyData(this.frequencyData);
-
-	      return this.frequencyData;
-	    }
-	  }, {
-	    key: 'fftSize',
-	    get: function get() {
-	      return this.analyser.fftSize;
-	    }
-	  }]);
-
-	  return AudioWrapper;
-	}();
-
 	var AudioMaster = function () {
 	  function AudioMaster() {
 	    _classCallCheck(this, AudioMaster);
 
 	    var FFT_SIZE = 1024 / 2 / 16; // 256
-	    this.audio = new AudioWrapper(FFT_SIZE, this.onComplete.bind(this));
-	    this.spectrogram = new _spectrogram2.default(FFT_SIZE);
+
+	    this.state = new _audioState2.default(FFT_SIZE);
+
+	    this.audio = new _audioWrapper2.default(this.state, this.onComplete.bind(this));
+	    this.spectrogram = new _spectrogram2.default(this.state);
 
 	    // this.grapher = new AudioGrapher(FFTSIZE)
-	    // this.visual = new AudioVisualizer()
+	    // this.visual = new AudioVisualizer(FFT_SIZE)
 	    this.running = true;
 
 	    this.renderFrame();
@@ -128,13 +102,11 @@
 	      if (this.running) requestAnimationFrame(this.renderFrame.bind(this));
 
 	      var frequencyData = this.audio.getFrequencyData();
-	      // console.log(frequencyData);
-	      this.spectrogram.update(frequencyData);
+	      this.state.update(frequencyData);
 
-	      // this.grapher.addFrequencyData(frequencyData)
+	      this.spectrogram.update(this.state);
+
 	      // this.visual.update(frequencyData)
-	      // Plotly.redraw('frequency-graph')
-	      // Plotly.redraw('velocity-graph')
 	    }
 	  }, {
 	    key: 'onComplete',
@@ -147,40 +119,6 @@
 	}();
 
 	new AudioMaster();
-
-	// let data = {
-	//   labels: ["January", "February", "March", "April", "May", "June", "July"],
-	//   datasets: [
-	//     {
-	//       label: "",
-	//       backgroundColor: [
-	//         'rgba(255, 99, 132, 0.2)',
-	//         'rgba(54, 162, 235, 0.2)',
-	//         'rgba(255, 206, 86, 0.2)',
-	//         'rgba(75, 192, 192, 0.2)',
-	//         'rgba(153, 102, 255, 0.2)',
-	//         'rgba(255, 159, 64, 0.2)'
-	//       ],
-	//       borderColor: [
-	//         'rgba(255,99,132,1)',
-	//         'rgba(54, 162, 235, 1)',
-	//         'rgba(255, 206, 86, 1)',
-	//         'rgba(75, 192, 192, 1)',
-	//         'rgba(153, 102, 255, 1)',
-	//         'rgba(255, 159, 64, 1)'
-	//       ],
-	//       borderWidth: 0,
-	//       data: [65, 59, 80, 81, 56, 55, 40],
-	//     }
-	//   ]
-	// };
-	//
-	// let ctx = document.getElementById('chartjs').getContext('2d')
-	// let myBarChart = new Chart(ctx, {
-	//   type: 'bar',
-	//   data,
-	//   // options
-	// });
 
 /***/ },
 /* 1 */
@@ -25535,27 +25473,18 @@
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 	var Spectrogram = function () {
-	  function Spectrogram(fftSize) {
+	  function Spectrogram(state) {
 	    _classCallCheck(this, Spectrogram);
 
-	    this.fftSize = fftSize;
-
-	    this.frequencyHistory = [];
-	    this.derivativeData = [];
-	    this.step = 0;
-
-	    for (var i = 0; i < this.fftSize / 2; i++) {
-	      this.derivativeData.push([0]);
-	      this.frequencyHistory.push([0]);
-	    }
+	    var nyquist = state.nyquistFrequency;
 
 	    var valueData = {
-	      labels: new Array(this.fftSize / 2),
+	      labels: new Array(nyquist),
 	      datasets: [{
 	        label: "",
 	        backgroundColor: [],
 	        borderWidth: 0,
-	        data: new Array(this.fftSize / 2)
+	        data: new Array(nyquist)
 	      }]
 	    };
 
@@ -25578,12 +25507,12 @@
 	    });
 
 	    var derivativeData = {
-	      labels: new Array(this.fftSize / 2),
+	      labels: new Array(nyquist),
 	      datasets: [{
 	        label: "",
 	        backgroundColor: [],
 	        borderWidth: 0,
-	        data: new Array(this.fftSize / 2)
+	        data: new Array(nyquist)
 	      }]
 	    };
 
@@ -25610,7 +25539,7 @@
 	      datasets: []
 	    };
 
-	    for (var _i = 0; _i < this.fftSize / 2; _i++) {
+	    for (var i = 0; i < nyquist; i++) {
 	      derivativeLineData.labels.push('');
 	      derivativeLineData.datasets.push({
 	        label: "",
@@ -25639,42 +25568,28 @@
 
 	  _createClass(Spectrogram, [{
 	    key: 'update',
-	    value: function update(frequencyData) {
-	      var _this = this;
-
+	    value: function update(state) {
 	      this.step++;
 
 	      // update the value graphs
-	      this.valueGraph.data.datasets[0].data = frequencyData;
+	      this.valueGraph.data.datasets[0].data = state.currentFrequencyData;
 	      this.valueGraph.update();
 	      this.valueGraph.render();
 
-	      // update derivative data
-	      for (var i = 0; i < frequencyData.length; i++) {
-	        var current = frequencyData[i];
-	        var previous = this.frequencyHistory[i][this.step - 1];
-
-	        this.derivativeData[i].push(current - previous);
-	        this.frequencyHistory[i].push(current);
-	      }
-
 	      // render derivative graph
-	      this.derivativeGraph.data.datasets[0].data = this.derivativeData.map(function (item) {
-	        return item[_this.step];
-	      });
+	      this.derivativeGraph.data.datasets[0].data = state.currentVelocityData;
 	      this.derivativeGraph.update();
 	      this.derivativeGraph.render();
 
 	      // render derivative line graph
 	      this.derivativeLineGraph.data.labels.push('');
-	      for (var _i2 = 0; _i2 < this.derivativeData.length; _i2++) {
-	        var derivatives = this.derivativeData[_i2];
+	      for (var i = 0; i < state.velocityHistory.length; i++) {
+	        var derivatives = state.velocityHistory[i];
 
 	        // console.log(this.derivativeLineGraph.data.datasets);
-	        this.derivativeLineGraph.data.datasets[_i2].data.push(derivatives[derivatives.length - 1]);
-
-	        // debugger
+	        this.derivativeLineGraph.data.datasets[i].data.push(derivatives[derivatives.length - 1]);
 	      }
+
 	      this.derivativeLineGraph.update();
 	      this.derivativeLineGraph.render();
 	    }
@@ -25684,6 +25599,156 @@
 	}();
 
 	exports.default = Spectrogram;
+
+/***/ },
+/* 155 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var AudioState = function () {
+	  function AudioState(fftSize) {
+	    _classCallCheck(this, AudioState);
+
+	    this.fftSize = fftSize;
+	    this.nyquistFrequency = this.fftSize / 2;
+
+	    this.step = 0;
+	    this.frequencyHistory = [];
+	    this.velocityHistory = [];
+	    this.accelerationHistory = [];
+
+	    for (var i = 0; i < this.nyquistFrequency; i++) {
+	      this.frequencyHistory.push([0]);
+	      this.velocityHistory.push([0]);
+	      this.accelerationHistory.push([0]);
+	    }
+	  }
+
+	  _createClass(AudioState, [{
+	    key: "update",
+	    value: function update(frequencyData) {
+	      this.step++;
+
+	      // update derivative data
+	      for (var i = 0; i < frequencyData.length; i++) {
+	        var currentFrequency = frequencyData[i];
+	        var currentVelocity = currentFrequency - this.frequencyHistory[i][this.step - 1];
+	        var currentAcceleration = currentVelocity - this.velocityHistory[i][this.step - 1];
+
+	        this.frequencyHistory[i].push(currentFrequency);
+	        this.velocityHistory[i].push(currentVelocity);
+	        this.accelerationHistory[i].push(currentAcceleration);
+	      }
+	    }
+
+	    // An array of all the last items of each frequency array
+
+	  }, {
+	    key: "currentFrequencyData",
+	    get: function get() {
+	      var output = [];
+	      for (var i = 0; i < this.frequencyHistory.length; i++) {
+	        var frequencyData = this.frequencyHistory[i];
+	        output.push(frequencyData[frequencyData.length - 1]);
+	      }
+	      return output;
+	    }
+
+	    // An array of all the last items of each velocity array
+
+	  }, {
+	    key: "currentVelocityData",
+	    get: function get() {
+	      var output = [];
+	      for (var i = 0; i < this.velocityHistory.length; i++) {
+	        var frequencyData = this.velocityHistory[i];
+	        output.push(frequencyData[frequencyData.length - 1]);
+	      }
+	      return output;
+	    }
+
+	    // An array of all the last items of each acceleration array
+
+	  }, {
+	    key: "currentAccelerationData",
+	    get: function get() {
+	      var output = [];
+	      for (var i = 0; i < this.accelerationHistory.length; i++) {
+	        var frequencyData = this.accelerationHistory[i];
+	        output.push(frequencyData[frequencyData.length - 1]);
+	      }
+	      return output;
+	    }
+	  }]);
+
+	  return AudioState;
+	}();
+
+	exports.default = AudioState;
+
+/***/ },
+/* 156 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	var AudioWrapper = function () {
+	  function AudioWrapper(state, onComplete) {
+	    _classCallCheck(this, AudioWrapper);
+
+	    var fftSize = state.fftSize;
+
+	    this.audio = new Audio();
+	    this.context = new AudioContext();
+	    this.analyser = this.context.createAnalyser();
+	    this.analyser.fftSize = fftSize;
+	    this.source = this.context.createMediaElementSource(this.audio);
+	    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+
+	    this.audio.src = './assets/ride4u.mp3';
+	    this.audio.autoplay = true;
+	    document.body.appendChild(this.audio);
+
+	    this.source.connect(this.analyser);
+	    this.analyser.connect(this.context.destination);
+	    this.audio.onended = onComplete;
+	  }
+
+	  _createClass(AudioWrapper, [{
+	    key: 'getFrequencyData',
+	    value: function getFrequencyData() {
+	      this.analyser.getByteFrequencyData(this.frequencyData);
+
+	      return this.frequencyData;
+	    }
+	  }, {
+	    key: 'fftSize',
+	    get: function get() {
+	      return this.analyser.fftSize;
+	    }
+	  }]);
+
+	  return AudioWrapper;
+	}();
+
+	exports.default = AudioWrapper;
 
 /***/ }
 /******/ ]);
