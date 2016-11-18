@@ -1,7 +1,53 @@
 export default class Spectrogram {
-  constructor(state) {
+  constructor(state, showLineGraph = true, showValueGraph = true, showVelocityGraph = true) {
     let nyquist = state.nyquistFrequency
+    this.showValueGraph = showValueGraph
+    this.showVelocityGraph = showVelocityGraph
+    this.showLineGraph = showLineGraph
 
+    if (this.showValueGraph)
+      this.initializeValueGraph(nyquist)
+
+    if (this.showVelocityGraph)
+      this.initializeVelocityGraph(nyquist)
+
+    if (this.showLineGraph)
+      this.initializeLineGraph(nyquist)
+  }
+
+  update(state) {
+    this.step++
+
+    if (this.showValueGraph) {
+      // update the value graphs
+      this.valueGraph.data.datasets[0].data = state.currentFrequencyData
+      this.valueGraph.update()
+      this.valueGraph.render()
+    }
+
+    if (this.showVelocityGraph) {
+      // render derivative graph
+      this.derivativeGraph.data.datasets[0].data = state.currentVelocityData
+      this.derivativeGraph.update()
+      this.derivativeGraph.render()
+    }
+
+    if (this.showLineGraph) {
+      // render derivative line graph
+      this.derivativeLineGraph.data.labels.push('')
+      for (let i = 0; i < state.velocityHistory.length; i++) {
+        let derivatives = state.velocityHistory[i]
+
+        // console.log(this.derivativeLineGraph.data.datasets);
+        this.derivativeLineGraph.data.datasets[i].data.push(derivatives[derivatives.length-1])
+      }
+
+      this.derivativeLineGraph.update()
+      this.derivativeLineGraph.render()
+    }
+  }
+
+  initializeValueGraph(nyquist) {
     let valueData = {
       labels: new Array(nyquist),
       datasets: [{
@@ -29,7 +75,9 @@ export default class Spectrogram {
         }
       }
     })
+  }
 
+  initializeVelocityGraph(nyquist) {
     let derivativeData = {
       labels: new Array(nyquist),
       datasets: [{
@@ -57,7 +105,9 @@ export default class Spectrogram {
         }
       }
     })
+  }
 
+  initializeLineGraph(nyquist) {
     let derivativeLineData = {
       labels: [],
       datasets: []
@@ -88,31 +138,5 @@ export default class Spectrogram {
         }
       }
     })
-  }
-
-  update(state) {
-    this.step++
-
-    // update the value graphs
-    this.valueGraph.data.datasets[0].data = state.currentFrequencyData
-    this.valueGraph.update()
-    this.valueGraph.render()
-
-    // render derivative graph
-    this.derivativeGraph.data.datasets[0].data = state.currentVelocityData
-    this.derivativeGraph.update()
-    this.derivativeGraph.render()
-
-    // render derivative line graph
-    this.derivativeLineGraph.data.labels.push('')
-    for (let i = 0; i < state.velocityHistory.length; i++) {
-      let derivatives = state.velocityHistory[i]
-
-      // console.log(this.derivativeLineGraph.data.datasets);
-      this.derivativeLineGraph.data.datasets[i].data.push(derivatives[derivatives.length-1])
-    }
-
-    this.derivativeLineGraph.update()
-    this.derivativeLineGraph.render()
   }
 }
